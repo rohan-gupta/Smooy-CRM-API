@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Smooy Loyalty Program API
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.11
+    Environment:
+      Variables:
+        LOYALTY_TABLE: !Ref LoyaltyCardsTable
+        REWARDS_TABLE: !Ref RewardsTable
+
+Resources:
+  LoyaltyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.handler
+      CodeUri: .
+      Architectures:
+        - x86_64
+      Events:
+        CatchAll:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref HttpApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoyaltyCardsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RewardsTable
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: "$default"
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - "*"
+
+  LoyaltyCardsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: loyalty_cards
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  RewardsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: rewards
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: reward_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: reward_id
+          KeyType: HASH
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  LoyaltyFunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt LoyaltyFunction.Arn
