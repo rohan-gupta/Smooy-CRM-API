@@ -1,100 +1,122 @@
+import logging
 import os
-import hashlib
-from datetime import datetime, timezone
 from typing import Optional
 
 import boto3
 from boto3.dynamodb.conditions import Key
-
+from botocore.exceptions import ClientError
 
 CUSTOMERS_TABLE = os.environ.get("CUSTOMERS_TABLE", "customers")
-LOYALTY_TABLE = os.environ.get("LOYALTY_TABLE", "loyalty")
-REWARDS_TABLE = os.environ.get("REWARDS_TABLE", "rewards")
 LOYALTY_CARDS_TABLE = os.environ.get("LOYALTY_CARDS_TABLE", "loyalty_cards")
+REWARDS_TABLE = os.environ.get("REWARDS_TABLE", "rewards")
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+_dynamodb = None
 
 
-dynamodb = boto3.resource("dynamodb")
-customers_table = dynamodb.Table(CUSTOMERS_TABLE)
-loyalty_table = dynamodb.Table(LOYALTY_TABLE)
-rewards_table = dynamodb.Table(REWARDS_TABLE)
-loyalty_cards_table = dynamodb.Table(LOYALTY_CARDS_TABLE)
+def _get_dynamodb():
+    global _dynamodb
+    if _dynamodb is None:
+        _dynamodb = boto3.resource("dynamodb")
+    return _dynamodb
+
+
+def _get_table(table_name: str):
+    return _get_dynamodb().Table(table_name)
+
+
+def _paginated_query(table_name: str, **kwargs) -> list[dict]:
+    pass
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    pass
 
 
-# --------------- Users ---------------
+def _generate_qr_token() -> str:
+    pass
 
 
-def create_customer(phone: str, firstName: str, email: str, birthday: Optional[str] = None) -> dict:
-    now = _now()
-    print(f"Creating customer {phone} with name {firstName} and email {email} and birthday {birthday}")
-    customer_id = hashlib.md5((phone + email).encode()).hexdigest()
-    item = {
-        "PK": f"USER#{phone}",
-        "SK": f"CUSTOMER#{customer_id}",
-        "customerId": customer_id,
-        "phoneNumber": phone,
-        "firstName": firstName,
-        "email": email,
-        "birthday": birthday,
-        "created_at": now,
-    }
-    customers_table.put_item(
-        Item=item,
-        ConditionExpression="attribute_not_exists(PK) AND attribute_not_exists(SK)",
-    )
-    return item
+# --------------- Customers ---------------
 
 
-def get_customer(phone: str) -> Optional[dict]:
-    resp = customers_table.query(
-        KeyConditionExpression=Key("PK").eq(f"USER#{phone}") & Key("SK").begins_with("CUSTOMER#"),
-        Limit=1,
-    )
-    items = resp.get("Items", [])
-    return items[0] if items else None
+def create_customer(
+    phone_number: str,
+    first_name: str,
+    email: str,
+    birthday: Optional[str],
+    marketing_consent: bool,
+    outlet_id: str,
+) -> dict:
+    pass
+
+
+def get_customer_by_phone(phone_number: str) -> Optional[dict]:
+    pass
+
+
+def get_customer_by_qr_token(qr_token: str) -> Optional[dict]:
+    pass
+
+
+def update_customer(
+    phone_number: str,
+    first_name: str,
+    email: str,
+    birthday: Optional[str],
+) -> dict:
+    pass
 
 
 # --------------- Loyalty Cards ---------------
 
 
-def get_loyalty_card_details(customer_id: str) -> Optional[dict]:
-    resp = loyalty_cards_table.query(
-        KeyConditionExpression=Key("PK").eq(f"USER#{customer_id}") & Key("SK").begins_with("LOYALTY_CARD#")
-    )
-    items = resp.get("Items", [])
-    return items[0] if items else None
+def create_loyalty_card(customer_id: str, max_stamps: int = 10) -> dict:
+    pass
 
 
-def add_loyalty_card_stamp(customer_id: str, card_id: str, current_stamp_count: int) -> dict:
-    now = _now()
-    item = {
-        "PK": f"USER#{customer_id}",
-        "SK": f"LOYALTY_CARD#{card_id}",
-        "cardId": card_id,
-        "currentStampCount": current_stamp_count,
-    }
-    loyalty_cards_table.put_item(Item=item)
-    return item
+def get_active_loyalty_card(customer_id: str) -> Optional[dict]:
+    pass
+
+
+def get_all_loyalty_cards(customer_id: str) -> list[dict]:
+    pass
+
+
+def add_stamp_to_card(customer_id: str, card_id: str) -> dict:
+    pass
+
+
+def complete_loyalty_card(customer_id: str, card_id: str) -> dict:
+    pass
 
 
 # --------------- Rewards ---------------
 
-def list_rewards(customer_id: str) -> list[dict]:
-    resp = rewards_table.query(
-        KeyConditionExpression=Key("PK").eq(f"USER#{customer_id}") & Key("SK").begins_with("REWARD#")
-    )
-    return resp.get("Items", [])
+
+def create_reward(
+    customer_id: str,
+    card_id: str,
+    reward_type: str,
+    title: str,
+    description: str,
+    expires_at: str,
+    metadata: Optional[dict] = None,
+) -> dict:
+    pass
 
 
-def redeem_loyalty_reward(customer_id: str, reward_id: str) -> dict:
-    now = _now()
-    item = {
-        "PK": f"USER#{customer_id}",
-        "SK": f"REWARD#{reward_id}",
-        "rewardId": reward_id,
-    }
-    rewards_table.put_item(Item=item)
-    return item
+def get_customer_rewards(customer_id: str) -> list[dict]:
+    pass
+
+
+def redeem_reward(
+    customer_id: str,
+    reward_id: str,
+    redemption_channel: Optional[str],
+    redemption_outlet_id: Optional[str],
+    redemption_staff_id: Optional[str],
+) -> dict:
+    pass

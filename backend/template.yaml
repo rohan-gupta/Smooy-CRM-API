@@ -9,10 +9,12 @@ Globals:
     Runtime: python3.11
     Environment:
       Variables:
-        LOYALTY_TABLE: !Ref LoyaltyCardsTable
+        CUSTOMERS_TABLE: !Ref CustomersTable
+        LOYALTY_CARDS_TABLE: !Ref LoyaltyCardsTable
         REWARDS_TABLE: !Ref RewardsTable
 
 Resources:
+
   LoyaltyFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -28,6 +30,8 @@ Resources:
             Method: ANY
             ApiId: !Ref HttpApi
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CustomersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref LoyaltyCardsTable
         - DynamoDBCrudPolicy:
@@ -49,20 +53,41 @@ Resources:
         AllowHeaders:
           - "*"
 
+  CustomersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: customers
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: phone_number
+          AttributeType: S
+        - AttributeName: member_qr_token
+          AttributeType: S
+      KeySchema:
+        - AttributeName: phone_number
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: qr-token-index
+          KeySchema:
+            - AttributeName: member_qr_token
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
   LoyaltyCardsTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: loyalty_cards
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: PK
+        - AttributeName: customer_id
           AttributeType: S
-        - AttributeName: SK
+        - AttributeName: card_id
           AttributeType: S
       KeySchema:
-        - AttributeName: PK
+        - AttributeName: customer_id
           KeyType: HASH
-        - AttributeName: SK
+        - AttributeName: card_id
           KeyType: RANGE
 
   RewardsTable:
@@ -71,11 +96,15 @@ Resources:
       TableName: rewards
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
+        - AttributeName: customer_id
+          AttributeType: S
         - AttributeName: reward_id
           AttributeType: S
       KeySchema:
-        - AttributeName: reward_id
+        - AttributeName: customer_id
           KeyType: HASH
+        - AttributeName: reward_id
+          KeyType: RANGE
 
 Outputs:
   ApiUrl:

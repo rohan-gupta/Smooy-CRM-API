@@ -5,12 +5,6 @@ from enum import Enum
 
 # --------------- Enums ---------------
 
-class CustomerStatus(str, Enum):
-    active = "active"
-    inactive = "inactive"
-    blocked = "blocked"
-
-
 class LoyaltyCardStatus(str, Enum):
     active = "active"
     completed = "completed"
@@ -18,9 +12,8 @@ class LoyaltyCardStatus(str, Enum):
 
 
 class RewardType(str, Enum):
-    welcome_20_percent = "welcome_20_percent"
-    fifth_stamp_treat = "fifth_stamp_treat"
-    tenth_stamp_reward = "tenth_stamp_reward"
+    welcome_discount = "welcome_discount"
+    stamp_treat = "stamp_treat"
     birthday_reward = "birthday_reward"
 
 
@@ -33,102 +26,75 @@ class RewardStatus(str, Enum):
 # --------------- Customers ---------------
 
 class CreateCustomerRequest(BaseModel):
-    phoneNumber: str = Field(..., min_length=1)
-    firstName: str
+    phone_number: str = Field(..., min_length=1)
+    first_name: str = Field(..., min_length=1)
     email: EmailStr
-    birthday: str
-    marketingConsent: bool = False
-    outletId: str = Field(default="pasir_ris_mall")
-
-
-class UpdateCustomerRequest(BaseModel):
-    firstName: Optional[str] = None
-    email: Optional[str] = None
     birthday: Optional[str] = None
-    marketingConsent: Optional[bool] = None
-    status: Optional[CustomerStatus] = None
-    outletId: Optional[str] = None
+    marketing_consent: bool = False
+    outlet_id: str = Field(default="pasir_ris_mall")
 
 
 class CustomerResponse(BaseModel):
-    customerId: str
-    phoneNumber: str
-    firstName: str
+    customer_id: str
+    phone_number: str
+    first_name: str
     email: str
     birthday: Optional[str] = None
-    memberQrToken: Optional[str] = None
+    marketing_consent: bool = False
+    outlet_id: str
+    member_qr_token: str
 
 
 # --------------- Loyalty Cards ---------------
 
-class CreateLoyaltyCardRequest(BaseModel):
-    customerId: str = Field(..., min_length=1)
-    outletId: str = Field(default="pasir_ris_mall")
-    maxStamps: int = Field(default=10, gt=0)
-
-
-class UpdateLoyaltyCardRequest(BaseModel):
-    cardId: str
-    customerId: str
-    currentStampCount: int = Field(default=None, ge=0)
-    status: Optional[LoyaltyCardStatus] = None
+class AddStampRequest(BaseModel):
+    card_id: str = Field(..., min_length=1)
 
 
 class LoyaltyCardResponse(BaseModel):
-    cardId: str
-    customerId: str
-    maxStamps: int
-    currentStampCount: int
+    card_id: str
+    customer_id: str
+    max_stamps: int
+    current_stamp_count: int
     status: LoyaltyCardStatus
-    startedAt: str
-    completedAt: Optional[str] = None
-    expiresAt: str
-    createdAt: str
-    updatedAt: str
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    expires_at: Optional[str] = None
+    created_at: str
+    updated_at: str
 
 
 # --------------- Rewards ---------------
 
 class RewardMetadata(BaseModel):
-    discountPercent: Optional[int] = None
-    rewardValue: Optional[float] = None
-    rewardUnit: Optional[str] = None
+    discount_percent: Optional[int] = None
+    reward_value: Optional[float] = None
+    reward_unit: Optional[str] = None
 
 
-class CreateRewardRequest(BaseModel):
-    customerId: str = Field(..., min_length=1)
-    cardId: Optional[str] = None
-    rewardType: RewardType
-    title: str = Field(..., min_length=1)
-    description: str = ""
-    expiresAt: str = Field(..., min_length=1)
-    metadata: Optional[RewardMetadata] = None
-
-
-class UpdateRewardRequest(BaseModel):
-    status: Optional[RewardStatus] = None
-    redemptionChannel: Optional[str] = None
-    redemptionOutletId: Optional[str] = None
-    redemptionStaffId: Optional[str] = None
+class RedeemRewardRequest(BaseModel):
+    redemption_channel: Optional[str] = None
+    redemption_outlet_id: Optional[str] = None
+    redemption_staff_id: Optional[str] = None
 
 
 class RewardResponse(BaseModel):
-    rewardId: str
-    customerId: str
-    cardId: Optional[str] = None
-    rewardType: RewardType
+    reward_id: str
+    customer_id: str
+    card_id: Optional[str] = None
+    reward_type: str
     title: str
     description: str
     status: RewardStatus
-    unlockedAt: str
-    redeemedAt: Optional[str] = None
-    expiresAt: str
-    redemptionChannel: Optional[str] = None
-    redemptionOutletId: Optional[str] = None
-    redemptionStaffId: Optional[str] = None
+    unlocked_at: str
+    redeemed_at: Optional[str] = None
+    expires_at: Optional[str] = None
+    redemption_channel: Optional[str] = None
+    redemption_outlet_id: Optional[str] = None
+    redemption_staff_id: Optional[str] = None
     metadata: Optional[RewardMetadata] = None
-    createdAt: str
-    updatedAt: str
+    created_at: str
+    updated_at: str
 
 
 # --------------- Generic ---------------
