@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Smooy Loyalty Program API
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.11
+    Environment:
+      Variables:
+        CUSTOMERS_TABLE: !Ref CustomersTable
+        LOYALTY_CARDS_TABLE: !Ref LoyaltyCardsTable
+        REWARDS_TABLE: !Ref RewardsTable
+
+Resources:
+
+  LoyaltyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.handler
+      CodeUri: .
+      Architectures:
+        - x86_64
+      Events:
+        CatchAll:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref HttpApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CustomersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoyaltyCardsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RewardsTable
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: "$default"
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - "*"
+
+  CustomersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: customers
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: phone_number
+          AttributeType: S
+        - AttributeName: member_qr_token
+          AttributeType: S
+      KeySchema:
+        - AttributeName: phone_number
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: qr-token-index
+          KeySchema:
+            - AttributeName: member_qr_token
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  LoyaltyCardsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: loyalty_cards
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: customer_id
+          AttributeType: S
+        - AttributeName: card_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: customer_id
+          KeyType: HASH
+        - AttributeName: card_id
+          KeyType: RANGE
+
+  RewardsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: rewards
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: customer_id
+          AttributeType: S
+        - AttributeName: reward_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: customer_id
+          KeyType: HASH
+        - AttributeName: reward_id
+          KeyType: RANGE
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  LoyaltyFunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt LoyaltyFunction.Arn
